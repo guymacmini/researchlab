@@ -106,12 +106,12 @@ def create_app() -> FastAPI:
     
     # Include API routers
     from src.api.research import router as research_router
-    from src.api.companies import router as companies_router
-    from src.api.agents import router as agents_router
+    from src.api.workflow import router as workflow_router
+    from src.api.news import router as news_router
     
-    app.include_router(research_router, prefix="/api/v1/research", tags=["research"])
-    app.include_router(companies_router, prefix="/api/v1/companies", tags=["companies"])  
-    app.include_router(agents_router, prefix="/api/v1/agents", tags=["agents"])
+    app.include_router(research_router, prefix="/api/v1", tags=["research"])
+    app.include_router(workflow_router, prefix="/api/v1", tags=["workflow"])
+    app.include_router(news_router, prefix="/api/v1", tags=["news"])
     
     return app
 

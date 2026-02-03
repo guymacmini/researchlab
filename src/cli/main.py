@@ -10,6 +10,7 @@ from .research import research_cli
 from .workflow import workflow_cli
 from .news import news_cli
 from .config import config_cli
+from .sec import sec_cli
 from src.core.config import settings
 from src.core.logging import setup_logging
 
@@ -25,12 +26,14 @@ def cli(ctx, config, verbose, debug):
     ResearchLab CLI - AI-led investment research platform
     
     Run comprehensive research analysis using AI agents for fundamental, 
-    quantitative, sentiment, and risk analysis.
+    quantitative, sentiment, and risk analysis. Access SEC filings and 
+    financial data for in-depth company analysis.
     
     Examples:
         researchlab research start "Is AAPL a good investment?" --companies AAPL,GOOGL
         researchlab workflow status wf_12345
         researchlab news monitor start --companies "Apple Inc." --tickers AAPL
+        researchlab sec financial AAPL --periods 4 --quarterly
     """
     
     # Ensure context object exists
@@ -312,6 +315,7 @@ cli.add_command(research_cli, name='research')
 cli.add_command(workflow_cli, name='workflow')
 cli.add_command(news_cli, name='news')
 cli.add_command(config_cli, name='config')
+cli.add_command(sec_cli, name='sec')
 
 
 if __name__ == '__main__':

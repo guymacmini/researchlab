@@ -169,11 +169,19 @@ class SimpleCache:
         # Update memory cache
         self._memory_cache[key] = (value, expires_at)
         
-        # Update database cache
+        # Update database cache with proper upsert
         async with get_db() as db:
-            # Use SQLAlchemy merge to insert or update
-            cache_obj = Cache(key=key, value=value, expires_at=expires_at)
-            await db.merge(cache_obj)
+            from sqlalchemy import select
+            result = await db.execute(select(Cache).where(Cache.key == key))
+            existing = result.scalar_one_or_none()
+            
+            if existing:
+                existing.value = value
+                existing.expires_at = expires_at
+            else:
+                cache_obj = Cache(key=key, value=value, expires_at=expires_at)
+                db.add(cache_obj)
+            
             await db.commit()
     
     async def delete(self, key: str):

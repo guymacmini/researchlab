@@ -100,7 +100,7 @@ class ResearchAgent:
         """
         
         response = await self.anthropic.messages.create(
-            model="claude-3-haiku-20240307",  # Use faster model for symbol extraction
+            model="claude-3-5-haiku-20241022",  # Use faster model for symbol extraction
             max_tokens=10,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -198,46 +198,97 @@ class ResearchAgent:
         company_quote = company_data.get('quote', {})
         news_articles = news_data.get('articles', [])
         
-        # Build analysis prompt
-        prompt = f"""
-        You are a financial analyst. Analyze this company based on the provided data and answer the research query.
+        # Extract key metrics for analysis
+        metrics = company_metrics.get('metric', {})
+        pe_ratio = metrics.get('peBasicExclExtraTTM', metrics.get('peTTM', 'N/A'))
+        pb_ratio = metrics.get('pbQuarterly', 'N/A')
+        ps_ratio = metrics.get('psAnnual', 'N/A')
+        roe = metrics.get('roeTTM', 'N/A')
+        debt_equity = metrics.get('totalDebt/totalEquityQuarterly', 'N/A')
+        revenue_growth = metrics.get('revenueGrowthTTMYoy', 'N/A')
+        eps_growth = metrics.get('epsGrowthTTMYoy', 'N/A')
+        gross_margin = metrics.get('grossMarginTTM', 'N/A')
+        dividend_yield = metrics.get('dividendYieldIndicatedAnnual', 'N/A')
+        beta = metrics.get('beta', 'N/A')
         
-        RESEARCH QUERY: {query}
-        
-        COMPANY: {company_profile.get('name', 'Unknown')} ({company_data.get('symbol', '')})
-        
-        BASIC INFO:
-        - Sector: {company_profile.get('finnhubIndustry', 'Unknown')}
-        - Country: {company_profile.get('country', 'Unknown')}  
-        - Market Cap: {company_profile.get('marketCapitalization', 'Unknown')}
-        
-        CURRENT STOCK PRICE: ${company_quote.get('c', 'N/A')}
-        - Change: {company_quote.get('d', 'N/A')} ({company_quote.get('dp', 'N/A')}%)
-        - 52-week High: ${company_quote.get('h', 'N/A')}
-        - 52-week Low: ${company_quote.get('l', 'N/A')}
-        
-        RECENT NEWS HEADLINES ({len(news_articles)} articles):
-        {chr(10).join([f"- {article.get('headline', 'No headline')}" for article in news_articles[:5]])}
-        
-        FINANCIAL METRICS:
-        {json.dumps(company_metrics.get('metric', {}), indent=2) if company_metrics.get('metric') else 'No metrics available'}
-        
-        Provide a comprehensive analysis addressing:
-        1. Company overview and business model
-        2. Financial health and key metrics
-        3. Recent developments and news sentiment
-        4. Investment thesis (bullish/bearish factors)
-        5. Risks and opportunities
-        6. Direct answer to the research query
-        
-        Format your response as a structured analysis with clear sections.
-        """
+        # Build rigorous analysis prompt (first principles)
+        prompt = f"""You are a senior investment analyst at a top hedge fund. Provide RIGOROUS, QUANTIFIED analysis.
+
+RESEARCH QUERY: {query}
+
+=== COMPANY DATA ===
+Company: {company_profile.get('name', 'Unknown')} ({company_data.get('symbol', '')})
+Sector: {company_profile.get('finnhubIndustry', 'Unknown')}
+Country: {company_profile.get('country', 'Unknown')}
+Market Cap: ${company_profile.get('marketCapitalization', 'Unknown')}M
+
+=== CURRENT PRICE ===
+Price: ${company_quote.get('c', 'N/A')}
+Daily Change: {company_quote.get('d', 'N/A')} ({company_quote.get('dp', 'N/A')}%)
+52W High: ${company_quote.get('h', 'N/A')} | 52W Low: ${company_quote.get('l', 'N/A')}
+
+=== VALUATION METRICS ===
+P/E Ratio: {pe_ratio} | P/B: {pb_ratio} | P/S: {ps_ratio}
+Dividend Yield: {dividend_yield}%
+
+=== FINANCIAL HEALTH ===
+ROE: {roe}% | Gross Margin: {gross_margin}%
+Debt/Equity: {debt_equity} | Beta: {beta}
+Revenue Growth (YoY): {revenue_growth}% | EPS Growth (YoY): {eps_growth}%
+
+=== RECENT NEWS ({len(news_articles)} articles) ===
+{chr(10).join([f"• {article.get('headline', 'No headline')}" for article in news_articles[:5]])}
+
+=== ANALYSIS REQUIREMENTS ===
+You MUST provide ALL of the following sections with SPECIFIC NUMBERS:
+
+## 1. EXECUTIVE SUMMARY (2-3 sentences)
+- Clear BUY/HOLD/SELL recommendation with confidence level (X/10)
+- 12-month price target with % upside/downside
+- One-sentence thesis
+
+## 2. QUANTIFIED BUSINESS ANALYSIS
+- Revenue breakdown by segment (estimate % if not provided)
+- Competitive position: market share, key advantages, moat durability
+- Growth drivers with specific metrics
+- NO VAGUE TERMS like "strong" or "good" - USE NUMBERS
+
+## 3. VALUATION ANALYSIS
+- Compare P/E, P/B, P/S to sector averages (estimate if needed)
+- Is it cheap/fair/expensive vs history and peers?
+- Calculate implied growth rate from current multiple
+
+## 4. RISK ANALYSIS (MANDATORY - list exactly 3 risks)
+Each risk must include:
+- Risk Factor [N] (Severity: X/10): [Description]
+- Quantified impact if risk materializes
+Example: "Risk Factor 1 (Severity: 7/10): Customer concentration - top 3 customers = 45% revenue"
+
+## 5. CONTRARIAN ANALYSIS (MANDATORY - devil's advocate)
+- What is the BEAR CASE? Why might this investment FAIL?
+- What key assumption could be WRONG?
+- What would make you SELL?
+- Be genuinely critical, not just token skepticism
+
+## 6. ACTIONABLE RECOMMENDATION
+- Specific entry price (buy below $X)
+- Stop loss level ($X, representing Y% downside)
+- Position size recommendation (X% of portfolio)
+- Key catalyst to watch with expected timing
+- What metric would change your view?
+
+CRITICAL RULES:
+1. Every claim needs a NUMBER - no adjectives without quantification
+2. State confidence levels for uncertain estimates
+3. Contrarian section must be GENUINELY critical
+4. Answer the specific research query directly at the end
+"""
         
         try:
             response = await self.anthropic.messages.create(
                 model="claude-sonnet-4-20250514",
-                max_tokens=2000,
-                temperature=0.1,
+                max_tokens=4000,
+                temperature=0.2,
                 messages=[{"role": "user", "content": prompt}]
             )
             
@@ -275,7 +326,7 @@ class ResearchAgent:
         
         try:
             response = await self.anthropic.messages.create(
-                model="claude-3-haiku-20240307",
+                model="claude-3-5-haiku-20241022",
                 max_tokens=300,
                 messages=[{"role": "user", "content": prompt}]
             )

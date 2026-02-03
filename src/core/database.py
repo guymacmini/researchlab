@@ -141,6 +141,17 @@ async def close_db() -> None:
     logger.info("database_connections_closed")
 
 
+async def test_connection() -> bool:
+    """Test database connection."""
+    try:
+        async with DatabaseManager() as session:
+            await session.execute("SELECT 1")
+            return True
+    except Exception as e:
+        logger.error("Database connection test failed", error=str(e))
+        return False
+
+
 class DatabaseManager:
     """Database context manager for manual session management."""
     

@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from .config import settings
 from .logging import setup_logging
 from .database import init_db, close_db
+from ..monitoring import setup_monitoring_middleware
 
 
 @asynccontextmanager
@@ -51,6 +52,15 @@ def create_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "DELETE"],
         allow_headers=["*"],
+    )
+    
+    # Setup monitoring middleware
+    setup_monitoring_middleware(
+        app,
+        include_metrics=settings.monitoring.metrics_enabled,
+        include_health=settings.monitoring.health_enabled,
+        health_path=settings.monitoring.health_path,
+        metrics_path=settings.monitoring.metrics_path
     )
     
     # Request ID middleware
@@ -94,15 +104,7 @@ def create_app() -> FastAPI:
             content={"error": "Internal server error", "detail": detail}
         )
     
-    # Health check endpoint
-    @app.get("/health")
-    async def health_check():
-        """Health check endpoint."""
-        return {
-            "status": "healthy",
-            "version": settings.app.version,
-            "environment": settings.app.environment
-        }
+    # Note: Health check endpoint is handled by monitoring middleware
     
     # Include API routers
     from src.api.research import router as research_router

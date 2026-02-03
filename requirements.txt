@@ -49,3 +49,6 @@ greenlet>=3.3.0
 structlog>=24.1.0
 tenacity>=8.2.0
 click>=8.1.0
+
+# Monitoring
+psutil>=5.9.0

@@ -14,6 +14,7 @@ from .base import BaseAgent, AgentRole, AgentMessage, AgentResult
 from .research_director import ResearchDirectorAgent
 from .fundamental_analyst import FundamentalAnalystAgent
 from .supply_chain_analyst import SupplyChainAnalystAgent
+from .sentiment_analyst import SentimentAnalystAgent
 
 logger = structlog.get_logger()
 
@@ -36,6 +37,7 @@ class AgentOrchestrator:
             AgentRole.RESEARCH_DIRECTOR: ResearchDirectorAgent(),
             AgentRole.FUNDAMENTAL_ANALYST: FundamentalAnalystAgent(),
             AgentRole.SUPPLY_CHAIN_ANALYST: SupplyChainAnalystAgent(),
+            AgentRole.SENTIMENT_ANALYST: SentimentAnalystAgent(),
             # TODO: Add other agents as they're implemented
         }
         

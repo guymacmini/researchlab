@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 
 from .config import settings
 from .logging import setup_logging
+from .logging_middleware import setup_request_logging
 from .database import init_db, close_db
 from ..monitoring import setup_monitoring_middleware
 from ..rate_limiting import setup_rate_limiting
@@ -142,20 +143,27 @@ def create_app() -> FastAPI:
             }
         )
     
-    # Request ID middleware
+    # Setup enhanced request logging (this includes request ID management)
+    setup_request_logging(
+        app,
+        include_request_body=settings.app.environment == "development",
+        include_response_body=False,  # Usually too verbose
+        max_body_size=2048,
+        skip_paths=["/health", "/metrics", "/docs", "/openapi.json", "/redoc"]
+    )
+    
+    # Simple request ID middleware for response headers (request ID is set by logging middleware)
     @app.middleware("http")
-    async def add_request_id(request: Request, call_next):
-        """Add request ID to structured logging context."""
-        import uuid
-        request_id = str(uuid.uuid4())
+    async def add_request_id_header(request: Request, call_next):
+        """Add request ID to response headers."""
+        from .logging import get_request_id
         
-        # Bind request ID to logger context
-        logger = structlog.get_logger().bind(request_id=request_id)
-        request.state.logger = logger
-        
-        # Add to response headers
         response = await call_next(request)
-        response.headers["X-Request-ID"] = request_id
+        
+        # Get request ID from logging context (set by logging middleware)
+        request_id = get_request_id()
+        if request_id:
+            response.headers["X-Request-ID"] = request_id
         
         return response
     

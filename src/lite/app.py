@@ -69,6 +69,28 @@ def create_lite_app() -> FastAPI:
     # Mount static files and templates
     templates = Jinja2Templates(directory="src/lite/templates")
     
+    # Add datetime filter
+    def format_datetime(value, format="%Y-%m-%d %H:%M"):
+        from datetime import datetime
+        if value is None:
+            return ""
+        if isinstance(value, (int, float)):
+            # Unix timestamp
+            try:
+                value = datetime.fromtimestamp(value)
+            except:
+                return str(value)
+        if isinstance(value, str):
+            try:
+                value = datetime.fromisoformat(value.replace('Z', '+00:00'))
+            except:
+                return value
+        if hasattr(value, 'strftime'):
+            return value.strftime(format)
+        return str(value)
+    
+    templates.env.filters["datetime"] = format_datetime
+    
     # API Routes
     @app.get("/", response_class=HTMLResponse)
     async def home(request: Request):

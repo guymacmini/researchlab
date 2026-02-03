@@ -90,8 +90,9 @@ async def get_session_factory() -> async_sessionmaker:
     return _session_factory
 
 
-async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
-    """Get a database session."""
+@asynccontextmanager
+async def get_db():
+    """Get database session context manager."""
     session_factory = await get_session_factory()
     
     async with session_factory() as session:
@@ -100,15 +101,6 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
         except Exception:
             await session.rollback()
             raise
-        finally:
-            await session.close()
-
-
-@asynccontextmanager
-async def get_db():
-    """Get database session context manager."""
-    async with get_db_session() as session:
-        yield session
 
 
 async def init_database():

@@ -134,9 +134,9 @@ def main():
     
     print_startup_info()
     
-    # Open browser in background
-    if not os.getenv("NO_BROWSER"):
-        asyncio.create_task(open_browser())
+    # Browser opening moved to after server start hint
+    url = f"http://{settings.host}:{settings.port}"
+    print(f"\n🌐 Open your browser to: {url}\n")
     
     # Start the server
     logger.info("Starting uvicorn server")

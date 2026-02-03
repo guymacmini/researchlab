@@ -235,7 +235,7 @@ class ResearchAgent:
         
         try:
             response = await self.anthropic.messages.create(
-                model="claude-3-sonnet-20240229",
+                model="claude-sonnet-4-20250514",
                 max_tokens=2000,
                 temperature=0.1,
                 messages=[{"role": "user", "content": prompt}]

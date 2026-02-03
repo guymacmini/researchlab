@@ -1,11 +1,23 @@
-"""FastAPI application factory."""
+"""FastAPI application factory with comprehensive middleware and monitoring.
 
-import sys
+This module creates and configures the main FastAPI application instance with:
+- Structured logging and request tracing
+- Rate limiting and security middleware  
+- Health checks and metrics collection
+- OpenAPI documentation enhancements
+- CORS and security headers
+- Database and Redis integration
+- Multi-agent research API endpoints
+
+The application follows enterprise patterns with proper error handling,
+monitoring, and observability features for production deployment.
+"""
+
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
+from typing import AsyncIterator, Dict, Any
 
 import structlog
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -39,7 +51,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 def create_app() -> FastAPI:
-    """Create and configure FastAPI application."""
+    """Create and configure FastAPI application.
+    
+    Returns:
+        FastAPI: Fully configured FastAPI application instance with middleware,
+                 routes, and monitoring enabled.
+    """
     
     app = FastAPI(
         title=settings.app.app_name,
@@ -194,11 +211,13 @@ def create_app() -> FastAPI:
     # Note: Health check endpoint is handled by monitoring middleware
     
     # Include API routers
-    from src.api.research import router as research_router
-    from src.api.workflow import router as workflow_router
-    from src.api.news import router as news_router
-    from src.api.agents import router as agents_router
-    from src.api.companies import router as companies_router
+    from src.api import (
+        research_router,
+        workflow_router,
+        news_router,
+        agents_router,
+        companies_router
+    )
     
     app.include_router(research_router, prefix="/api/v1", tags=["research"])
     app.include_router(workflow_router, prefix="/api/v1", tags=["workflow"])  

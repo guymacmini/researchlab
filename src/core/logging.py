@@ -215,8 +215,8 @@ def log_performance(
                 raise
         
         # Return appropriate wrapper based on function type
-        import asyncio
-        if asyncio.iscoroutinefunction(func):
+        import inspect
+        if inspect.iscoroutinefunction(func):
             return async_wrapper
         else:
             return sync_wrapper

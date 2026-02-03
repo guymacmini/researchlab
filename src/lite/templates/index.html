@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}ResearchLab LITE - AI Investment Research{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="container text-center">
+        <h1 class="display-4 mb-4">
+            <i class="fas fa-chart-line me-3"></i>
+            ResearchLab LITE
+        </h1>
+        <p class="lead mb-4">
+            Simple AI-powered investment research. Get instant analysis on any stock or company.
+        </p>
+        <p class="mb-0">
+            <i class="fas fa-robot me-2"></i>
+            Powered by Claude AI and real-time financial data
+        </p>
+    </div>
+</div>
+
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-search me-2"></i>
+                        Start Your Research
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form action="/research" method="post" id="researchForm">
+                        <div class="mb-3">
+                            <label for="query" class="form-label">Research Query</label>
+                            <textarea class="form-control" id="query" name="query" rows="3" 
+                                      placeholder="Enter your research question (e.g., 'What's the investment potential of Apple stock?' or 'Analyze Tesla's recent performance')"
+                                      required></textarea>
+                            <div class="form-text">
+                                Be specific about what you want to analyze. Include company names, ticker symbols, or focus areas.
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg w-100">
+                            <i class="fas fa-play me-2"></i>
+                            Start Research
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-brain fa-3x text-primary"></i>
+                    </div>
+                    <h5>AI-Powered Analysis</h5>
+                    <p class="card-text">
+                        Advanced AI analyzes company fundamentals, news sentiment, and market data to provide comprehensive insights.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-clock fa-3x text-success"></i>
+                    </div>
+                    <h5>Real-Time Data</h5>
+                    <p class="card-text">
+                        Get the latest stock prices, financial metrics, and news articles to make informed decisions.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-rocket fa-3x text-warning"></i>
+                    </div>
+                    <h5>Simple Setup</h5>
+                    <p class="card-text">
+                        No complex setup required. Just add your API keys and start researching companies immediately.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-md-6">
+            <h4><i class="fas fa-lightbulb me-2"></i>Example Queries</h4>
+            <ul class="list-group">
+                <li class="list-group-item">
+                    <strong>Company Analysis:</strong> "What's the investment potential of Microsoft?"
+                </li>
+                <li class="list-group-item">
+                    <strong>Sector Comparison:</strong> "How does Apple compare to other tech stocks?"
+                </li>
+                <li class="list-group-item">
+                    <strong>Risk Assessment:</strong> "What are the main risks for investing in Tesla?"
+                </li>
+                <li class="list-group-item">
+                    <strong>Growth Analysis:</strong> "Analyze Amazon's growth prospects for 2024"
+                </li>
+            </ul>
+        </div>
+        <div class="col-md-6">
+            <h4><i class="fas fa-info-circle me-2"></i>What You Get</h4>
+            <ul class="list-group">
+                <li class="list-group-item">
+                    <i class="fas fa-check text-success me-2"></i>
+                    Company overview and business model
+                </li>
+                <li class="list-group-item">
+                    <i class="fas fa-check text-success me-2"></i>
+                    Financial health and key metrics
+                </li>
+                <li class="list-group-item">
+                    <i class="fas fa-check text-success me-2"></i>
+                    Recent news and market sentiment
+                </li>
+                <li class="list-group-item">
+                    <i class="fas fa-check text-success me-2"></i>
+                    Investment thesis and risk factors
+                </li>
+                <li class="list-group-item">
+                    <i class="fas fa-check text-success me-2"></i>
+                    Clarifying questions for deeper analysis
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('researchForm').addEventListener('submit', function(e) {
+    const button = this.querySelector('button[type="submit"]');
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Researching...';
+    button.disabled = true;
+});
+</script>
+{% endblock %}

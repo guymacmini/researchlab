@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}Research Results - {{ query }}{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-chart-bar me-2"></i>Research Results</h2>
+        <a href="/" class="btn btn-outline-primary">
+            <i class="fas fa-plus me-1"></i>
+            New Research
+        </a>
+    </div>
+
+    <div class="alert alert-info">
+        <strong>Query:</strong> {{ query }}
+    </div>
+
+    {% if results %}
+        {% set company_data = results.company_data %}
+        {% set news_data = results.news_data %}
+        {% set analysis = results.analysis %}
+
+        <!-- Company Overview -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h4><i class="fas fa-building me-2"></i>Company Overview</h4>
+                    </div>
+                    <div class="card-body">
+                        {% if company_data.profile %}
+                            <h5>{{ company_data.profile.name }} ({{ results.symbol }})</h5>
+                            <p><strong>Sector:</strong> {{ company_data.profile.finnhubIndustry or 'N/A' }}</p>
+                            <p><strong>Country:</strong> {{ company_data.profile.country or 'N/A' }}</p>
+                            <p><strong>Website:</strong> 
+                                {% if company_data.profile.weburl %}
+                                    <a href="{{ company_data.profile.weburl }}" target="_blank">{{ company_data.profile.weburl }}</a>
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </p>
+                            {% if company_data.profile.logo %}
+                                <img src="{{ company_data.profile.logo }}" alt="{{ company_data.profile.name }} logo" style="max-width: 100px;">
+                            {% endif %}
+                        {% else %}
+                            <p>Company profile information not available.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-dollar-sign me-2"></i>Stock Price</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        {% if company_data.quote %}
+                            <h3>${{ "%.2f"|format(company_data.quote.c or 0) }}</h3>
+                            {% set change = company_data.quote.d or 0 %}
+                            {% set change_percent = company_data.quote.dp or 0 %}
+                            <p class="{{ 'text-success' if change >= 0 else 'text-danger' }}">
+                                {{ "%.2f"|format(change) }} ({{ "%.2f"|format(change_percent) }}%)
+                            </p>
+                            <small class="text-muted">
+                                52W High: ${{ "%.2f"|format(company_data.quote.h or 0) }}<br>
+                                52W Low: ${{ "%.2f"|format(company_data.quote.l or 0) }}
+                            </small>
+                        {% else %}
+                            <p>Price data not available</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Analysis -->
+        <div class="analysis-section">
+            <h4><i class="fas fa-robot me-2"></i>AI Analysis</h4>
+            {% if analysis.analysis_text %}
+                <div class="analysis-text">
+                    {{ analysis.analysis_text | replace('\n', '<br>') | safe }}
+                </div>
+            {% else %}
+                <p class="text-muted">Analysis not available.</p>
+            {% endif %}
+        </div>
+
+        <!-- Financial Metrics -->
+        {% if company_data.metrics and company_data.metrics.metric %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4><i class="fas fa-calculator me-2"></i>Key Financial Metrics</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for key, value in company_data.metrics.metric.items() %}
+                            {% if value is not none and key in ['peNormalizedAnnual', 'pbAnnual', 'roaRfy', 'roeRfy', 'netProfitMarginAnnual'] %}
+                                <div class="col-md-6 col-lg-4 mb-3">
+                                    <div class="metric-card">
+                                        <strong>{{ key.replace('Annual', '').replace('Rfy', '') }}:</strong>
+                                        <span class="float-end">{{ "%.2f"|format(value) if value is number else value }}</span>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Recent News -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4><i class="fas fa-newspaper me-2"></i>Recent News ({{ news_data.count or 0 }} articles)</h4>
+            </div>
+            <div class="card-body">
+                {% if news_data.articles %}
+                    <div class="row">
+                        {% for article in news_data.articles[:6] %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-title">
+                                            {% if article.url %}
+                                                <a href="{{ article.url }}" target="_blank">{{ article.headline }}</a>
+                                            {% else %}
+                                                {{ article.headline }}
+                                            {% endif %}
+                                        </h6>
+                                        <p class="card-text small">{{ article.summary[:200] }}...</p>
+                                        {% if article.datetime %}
+                                            <small class="text-muted">{{ article.datetime|int|datetime }}</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No recent news articles available.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Clarifying Questions -->
+        {% if clarifying_questions %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4><i class="fas fa-question-circle me-2"></i>Clarifying Questions</h4>
+                </div>
+                <div class="card-body">
+                    <p>For deeper analysis, consider these follow-up questions:</p>
+                    <ul>
+                        {% for question in clarifying_questions %}
+                            <li>{{ question }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Research Metadata -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info me-2"></i>Research Details</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Generated:</strong> {{ results.timestamp }}</p>
+                <p><strong>Data Sources:</strong> {{ analysis.data_sources|join(', ') if analysis.data_sources else 'N/A' }}</p>
+                <p><strong>Status:</strong> 
+                    <span class="badge bg-success">{{ results.status.title() }}</span>
+                </p>
+            </div>
+        </div>
+
+    {% else %}
+        <div class="alert alert-warning">
+            <h4>No Results Available</h4>
+            <p>The research query did not return any results. Please try again with a different query.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Format datetime filter
+function formatDateTime(timestamp) {
+    return new Date(timestamp * 1000).toLocaleString();
+}
+</script>
+{% endblock %}

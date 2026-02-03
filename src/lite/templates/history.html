@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Research History - ResearchLab LITE{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-history me-2"></i>Research History</h2>
+        <a href="/" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i>
+            New Research
+        </a>
+    </div>
+
+    {% if research_history %}
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-list me-2"></i>Recent Research Queries</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Query</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for research in research_history %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ research.query }}</strong>
+                                        {% if research.query|length > 100 %}
+                                            <br><small class="text-muted">{{ research.query[:100] }}...</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if research.status == 'completed' %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check me-1"></i>Completed
+                                            </span>
+                                        {% elif research.status == 'failed' %}
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-times me-1"></i>Failed
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-clock me-1"></i>{{ research.status.title() }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if research.created_at %}
+                                            <small>{{ research.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                        {% else %}
+                                            <small class="text-muted">Unknown</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if research.status == 'completed' %}
+                                            <a href="/research/{{ research.id }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye me-1"></i>
+                                                View Results
+                                            </a>
+                                        {% else %}
+                                            <button class="btn btn-sm btn-secondary" disabled>
+                                                <i class="fas fa-ban me-1"></i>
+                                                No Results
+                                            </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="text-center">
+            <div class="card">
+                <div class="card-body">
+                    <i class="fas fa-folder-open fa-4x text-muted mb-3"></i>
+                    <h4>No Research History</h4>
+                    <p class="text-muted mb-4">
+                        You haven't run any research queries yet. Start by submitting your first research question!
+                    </p>
+                    <a href="/" class="btn btn-primary">
+                        <i class="fas fa-search me-2"></i>
+                        Start Your First Research
+                    </a>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="mt-4">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6><i class="fas fa-lightbulb me-2"></i>Research Tips</h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="mb-0">
+                            <li>Be specific about the company you want to analyze</li>
+                            <li>Include time frames for better context (e.g., "recent performance")</li>
+                            <li>Ask about specific aspects (growth, risks, valuation)</li>
+                            <li>Use stock symbols when known (AAPL, TSLA, etc.)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6><i class="fas fa-chart-line me-2"></i>Data Sources</h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="mb-0">
+                            <li><strong>Finnhub:</strong> Real-time stock data and financials</li>
+                            <li><strong>Claude AI:</strong> Advanced analysis and insights</li>
+                            <li><strong>News:</strong> Recent market developments</li>
+                            <li><strong>Company Data:</strong> Business profiles and metrics</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

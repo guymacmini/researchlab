@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Error - ResearchLab LITE{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="alert alert-danger">
+                <h4><i class="fas fa-exclamation-triangle me-2"></i>Research Error</h4>
+                <p><strong>Query:</strong> {{ query or 'Unknown query' }}</p>
+                <hr>
+                <p><strong>Error:</strong> {{ error }}</p>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-lightbulb me-2"></i>Troubleshooting Tips</h5>
+                </div>
+                <div class="card-body">
+                    <ul>
+                        <li>Check your API keys are correctly set in the .env file</li>
+                        <li>Make sure your query includes a valid company name or stock symbol</li>
+                        <li>Verify your internet connection is working</li>
+                        <li>Try a simpler query if the original was complex</li>
+                        <li>Wait a moment and try again (API rate limits may apply)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <a href="/" class="btn btn-primary">
+                    <i class="fas fa-arrow-left me-2"></i>
+                    Back to Home
+                </a>
+                <a href="/history" class="btn btn-outline-secondary ms-2">
+                    <i class="fas fa-history me-2"></i>
+                    View History
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

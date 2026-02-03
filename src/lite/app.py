@@ -1,0 +1,247 @@
+"""Simplified FastAPI app for ResearchLab LITE."""
+
+from contextlib import asynccontextmanager
+from typing import List, Dict, Any, Optional
+import json
+
+from fastapi import FastAPI, HTTPException, Request, Form
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
+
+import structlog
+
+from .config import settings
+from .database import init_database, close_database, get_db, Research
+from .agent import agent
+
+logger = structlog.get_logger()
+
+# Pydantic models
+class ResearchQuery(BaseModel):
+    query: str
+    include_clarifying_questions: bool = True
+
+
+class ResearchResponse(BaseModel):
+    id: int
+    query: str
+    status: str
+    results: Optional[Dict[str, Any]] = None
+    clarifying_questions: Optional[List[str]] = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan management."""
+    logger.info("Starting ResearchLab LITE")
+    
+    # Validate API keys
+    try:
+        settings.validate_required_keys()
+        logger.info("API keys validated successfully")
+    except ValueError as e:
+        logger.error("API key validation failed", error=str(e))
+        raise
+    
+    # Initialize database
+    await init_database()
+    logger.info("Application started successfully")
+    
+    yield
+    
+    logger.info("Shutting down ResearchLab LITE")
+    await close_database()
+
+
+def create_lite_app() -> FastAPI:
+    """Create simplified FastAPI application."""
+    
+    app = FastAPI(
+        title=settings.app_name,
+        version=settings.version,
+        description="Lightweight AI-powered investment research tool",
+        lifespan=lifespan,
+        debug=settings.debug
+    )
+    
+    # Mount static files and templates
+    templates = Jinja2Templates(directory="src/lite/templates")
+    
+    # API Routes
+    @app.get("/", response_class=HTMLResponse)
+    async def home(request: Request):
+        """Home page with web interface."""
+        return templates.TemplateResponse("index.html", {"request": request})
+    
+    @app.get("/api/health")
+    async def health():
+        """Health check endpoint."""
+        return {"status": "ok", "version": settings.version}
+    
+    @app.post("/api/research", response_model=ResearchResponse)
+    async def start_research(query_data: ResearchQuery):
+        """Start a research query."""
+        try:
+            logger.info("Starting research", query=query_data.query)
+            
+            # Generate clarifying questions if requested
+            clarifying_questions = None
+            if query_data.include_clarifying_questions:
+                clarifying_questions = await agent.get_clarifying_questions(query_data.query)
+            
+            # Perform research
+            results = await agent.research_company(query_data.query)
+            
+            return ResearchResponse(
+                id=results["id"],
+                query=query_data.query,
+                status="completed",
+                results=results,
+                clarifying_questions=clarifying_questions
+            )
+            
+        except Exception as e:
+            logger.error("Research failed", query=query_data.query, error=str(e))
+            raise HTTPException(status_code=500, detail=f"Research failed: {str(e)}")
+    
+    @app.get("/api/research/{research_id}", response_model=ResearchResponse)
+    async def get_research(research_id: int):
+        """Get research results by ID."""
+        async with get_db() as db:
+            result = await db.get(Research, research_id)
+            
+            if not result:
+                raise HTTPException(status_code=404, detail="Research not found")
+            
+            results_data = None
+            if result.results:
+                try:
+                    results_data = json.loads(result.results)
+                except json.JSONDecodeError:
+                    pass
+            
+            return ResearchResponse(
+                id=result.id,
+                query=result.query,
+                status=result.status,
+                results=results_data
+            )
+    
+    @app.get("/api/research")
+    async def list_research(limit: int = 10, offset: int = 0):
+        """List recent research queries."""
+        async with get_db() as db:
+            from sqlalchemy import select
+            # Get recent research
+            result = await db.execute(
+                select(Research.id, Research.query, Research.status, Research.created_at)
+                .order_by(Research.created_at.desc())
+                .limit(limit)
+                .offset(offset)
+            )
+            rows = result.fetchall()
+            
+            return {
+                "research": [
+                    {
+                        "id": row[0],
+                        "query": row[1],
+                        "status": row[2],
+                        "created_at": row[3].isoformat() if row[3] else None
+                    }
+                    for row in rows
+                ],
+                "limit": limit,
+                "offset": offset
+            }
+    
+    # Simple web interface routes
+    @app.post("/research", response_class=HTMLResponse)
+    async def web_research(request: Request, query: str = Form(...)):
+        """Web interface research submission."""
+        try:
+            # Start research
+            results = await agent.research_company(query)
+            
+            # Get clarifying questions
+            clarifying_questions = await agent.get_clarifying_questions(query)
+            
+            return templates.TemplateResponse("results.html", {
+                "request": request,
+                "query": query,
+                "results": results,
+                "clarifying_questions": clarifying_questions
+            })
+            
+        except Exception as e:
+            logger.error("Web research failed", query=query, error=str(e))
+            return templates.TemplateResponse("error.html", {
+                "request": request,
+                "query": query,
+                "error": str(e)
+            })
+    
+    @app.get("/research/{research_id}", response_class=HTMLResponse) 
+    async def web_research_detail(request: Request, research_id: int):
+        """Web interface research detail view."""
+        try:
+            async with get_db() as db:
+                result = await db.get(Research, research_id)
+                
+                if not result:
+                    raise HTTPException(status_code=404, detail="Research not found")
+                
+                results_data = None
+                if result.results:
+                    try:
+                        results_data = json.loads(result.results)
+                    except json.JSONDecodeError:
+                        pass
+                
+                return templates.TemplateResponse("results.html", {
+                    "request": request,
+                    "query": result.query,
+                    "results": results_data,
+                    "research_id": research_id
+                })
+                
+        except Exception as e:
+            return templates.TemplateResponse("error.html", {
+                "request": request,
+                "error": str(e)
+            })
+    
+    @app.get("/history", response_class=HTMLResponse)
+    async def web_history(request: Request):
+        """Web interface research history."""
+        async with get_db() as db:
+            from sqlalchemy import select
+            result = await db.execute(
+                select(Research.id, Research.query, Research.status, Research.created_at)
+                .order_by(Research.created_at.desc())
+                .limit(50)
+            )
+            rows = result.fetchall()
+            
+            research_history = [
+                {
+                    "id": row[0],
+                    "query": row[1],
+                    "status": row[2], 
+                    "created_at": row[3]
+                }
+                for row in rows
+            ]
+            
+            return templates.TemplateResponse("history.html", {
+                "request": request,
+                "research_history": research_history
+            })
+    
+    return app
+
+
+# Create app instance
+app = create_lite_app()

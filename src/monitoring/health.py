@@ -12,7 +12,7 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 from redis.asyncio import Redis
 
-from ..core.database import get_async_session
+from ..core.database import get_db_session
 from ..core.config import get_settings
 
 logger = structlog.get_logger()
@@ -110,7 +110,7 @@ class DatabaseHealthCheck(BaseHealthCheck):
     async def _perform_check(self) -> Dict[str, Any]:
         """Check database connectivity."""
         try:
-            async with get_async_session() as session:
+            async for session in get_db_session():
                 # Simple query to test connectivity
                 result = await session.execute("SELECT 1")
                 await result.fetchone()
@@ -120,6 +120,7 @@ class DatabaseHealthCheck(BaseHealthCheck):
                     "message": "Database connection successful",
                     "metadata": {"driver": "postgresql+asyncpg"}
                 }
+                break  # Only use the first session
         
         except Exception as e:
             return {

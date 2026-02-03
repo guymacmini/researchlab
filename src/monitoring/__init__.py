@@ -22,7 +22,8 @@ from .health import (
 
 from .middleware import (
     MetricsMiddleware,
-    HealthMiddleware
+    HealthMiddleware,
+    setup_monitoring_middleware
 )
 
 __all__ = [
@@ -47,4 +48,5 @@ __all__ = [
     # Middleware
     "MetricsMiddleware",
     "HealthMiddleware",
+    "setup_monitoring_middleware",
 ]

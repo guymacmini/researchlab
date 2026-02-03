@@ -15,6 +15,8 @@ from .database import init_db, close_db
 from ..monitoring import setup_monitoring_middleware
 from ..rate_limiting import setup_rate_limiting
 
+logger = structlog.get_logger()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:

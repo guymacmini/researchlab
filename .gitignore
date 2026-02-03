@@ -33,6 +33,6 @@ token.json
 Thumbs.db
 
 # Project specific
-data/
+/data/  # Only ignore data directory in root, not src/data
 logs/
 *.log

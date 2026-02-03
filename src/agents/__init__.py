@@ -1,4 +1,18 @@
-# Agent module
-from .base import BaseAgent
+"""AI agents for specialized research tasks."""
 
-__all__ = ["BaseAgent"]
+from .base import BaseAgent, AgentRole, AgentMessage, AgentResult
+from .orchestrator import AgentOrchestrator, ResearchSession, get_orchestrator
+from .research_director import ResearchDirectorAgent
+from .fundamental_analyst import FundamentalAnalystAgent
+
+__all__ = [
+    "BaseAgent",
+    "AgentRole", 
+    "AgentMessage",
+    "AgentResult",
+    "AgentOrchestrator",
+    "ResearchSession",
+    "get_orchestrator",
+    "ResearchDirectorAgent",
+    "FundamentalAnalystAgent",
+]

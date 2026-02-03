@@ -27,6 +27,7 @@ class WorkflowStage(Enum):
     FUNDAMENTAL_ANALYSIS = "fundamental_analysis"
     SENTIMENT_ANALYSIS = "sentiment_analysis"
     SUPPLY_CHAIN_ANALYSIS = "supply_chain_analysis"
+    QUANTITATIVE_ANALYSIS = "quantitative_analysis"
     RISK_ANALYSIS = "risk_analysis"
     REPORT_GENERATION = "report_generation"
     COMPLETED = "completed"
@@ -60,6 +61,7 @@ class ResearchWorkflowOrchestrator:
             WorkflowStage.FUNDAMENTAL_ANALYSIS,
             WorkflowStage.SENTIMENT_ANALYSIS,
             WorkflowStage.SUPPLY_CHAIN_ANALYSIS,
+            WorkflowStage.QUANTITATIVE_ANALYSIS,
             WorkflowStage.RISK_ANALYSIS,
             WorkflowStage.REPORT_GENERATION,
             WorkflowStage.COMPLETED
@@ -71,10 +73,12 @@ class ResearchWorkflowOrchestrator:
             AgentRole.FUNDAMENTAL_ANALYST: [AgentRole.RESEARCH_DIRECTOR],
             AgentRole.SENTIMENT_ANALYST: [AgentRole.RESEARCH_DIRECTOR],
             AgentRole.SUPPLY_CHAIN_ANALYST: [AgentRole.RESEARCH_DIRECTOR],
+            AgentRole.QUANTITATIVE_ANALYST: [AgentRole.RESEARCH_DIRECTOR],
             AgentRole.RISK_ANALYST: [
                 AgentRole.FUNDAMENTAL_ANALYST,
                 AgentRole.SENTIMENT_ANALYST,
-                AgentRole.SUPPLY_CHAIN_ANALYST
+                AgentRole.SUPPLY_CHAIN_ANALYST,
+                AgentRole.QUANTITATIVE_ANALYST
             ]
         }
         
@@ -249,6 +253,8 @@ class WorkflowSession:
                 return await self._execute_agent_analysis(AgentRole.SENTIMENT_ANALYST)
             elif stage == WorkflowStage.SUPPLY_CHAIN_ANALYSIS:
                 return await self._execute_agent_analysis(AgentRole.SUPPLY_CHAIN_ANALYST)
+            elif stage == WorkflowStage.QUANTITATIVE_ANALYSIS:
+                return await self._execute_agent_analysis(AgentRole.QUANTITATIVE_ANALYST)
             elif stage == WorkflowStage.RISK_ANALYSIS:
                 return await self._execute_agent_analysis(AgentRole.RISK_ANALYST)
             elif stage == WorkflowStage.REPORT_GENERATION:
@@ -454,6 +460,7 @@ class WorkflowSession:
                 'fundamental_analysis': self.agent_results.get(AgentRole.FUNDAMENTAL_ANALYST, {}).data if AgentRole.FUNDAMENTAL_ANALYST in self.agent_results else {},
                 'sentiment_analysis': self.agent_results.get(AgentRole.SENTIMENT_ANALYST, {}).data if AgentRole.SENTIMENT_ANALYST in self.agent_results else {},
                 'supply_chain_analysis': self.agent_results.get(AgentRole.SUPPLY_CHAIN_ANALYST, {}).data if AgentRole.SUPPLY_CHAIN_ANALYST in self.agent_results else {},
+                'quantitative_analysis': self.agent_results.get(AgentRole.QUANTITATIVE_ANALYST, {}).data if AgentRole.QUANTITATIVE_ANALYST in self.agent_results else {},
                 'risk_analysis': self.agent_results.get(AgentRole.RISK_ANALYST, {}).data if AgentRole.RISK_ANALYST in self.agent_results else {},
                 'workflow_metadata': {
                     'start_time': self.start_time.isoformat(),
@@ -503,6 +510,8 @@ class WorkflowSession:
             self.research_request['sentiment_analysis'] = result.data
         elif agent_role == AgentRole.SUPPLY_CHAIN_ANALYST:
             self.research_request['supply_chain_analysis'] = result.data
+        elif agent_role == AgentRole.QUANTITATIVE_ANALYST:
+            self.research_request['quantitative_analysis'] = result.data
         elif agent_role == AgentRole.RISK_ANALYST:
             self.research_request['risk_analysis'] = result.data
     

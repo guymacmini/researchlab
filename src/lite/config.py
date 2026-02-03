@@ -33,6 +33,7 @@ class LiteSettings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = False
+        extra = "ignore"  # Ignore extra fields from main .env file
     
     @property
     def database_url(self) -> str:

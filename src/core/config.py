@@ -5,11 +5,23 @@ import yaml
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 
-from pydantic_settings import BaseSettings
-from pydantic import Field, validator, ValidationError
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, field_validator, ValidationError
 import structlog
 
 logger = structlog.get_logger()
+
+
+class BaseConfigModel(BaseSettings):
+    """Base configuration model with common settings."""
+    
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8", 
+        case_sensitive=False,
+        validate_assignment=True,
+        extra="ignore"  # Allow extra fields from YAML
+    )
 
 
 class ConfigValidationError(Exception):
@@ -49,7 +61,7 @@ class YAMLConfigLoader:
         return result
 
 
-class DatabaseConfig(BaseSettings):
+class DatabaseConfig(BaseConfigModel):
     """Database configuration."""
     
     # PostgreSQL settings
@@ -77,7 +89,7 @@ class DatabaseConfig(BaseSettings):
         return f"postgresql://{self.user}:{self.password}@{self.host}:{self.port}/{self.name}"
 
 
-class APIConfig(BaseSettings):
+class APIConfig(BaseConfigModel):
     """External API configuration."""
     
     # Financial data APIs
@@ -95,7 +107,8 @@ class APIConfig(BaseSettings):
     finnhub_rate_limit: int = Field(default=60, env="FINNHUB_RATE_LIMIT")
     alpha_vantage_rate_limit: int = Field(default=5, env="ALPHA_VANTAGE_RATE_LIMIT")
     
-    @validator("google_credentials_file")
+    @field_validator("google_credentials_file")
+    @classmethod
     def validate_google_credentials(cls, v):
         """Validate Google credentials file exists."""
         if v and not Path(v).exists():
@@ -103,7 +116,7 @@ class APIConfig(BaseSettings):
         return v
 
 
-class AppConfig(BaseSettings):
+class AppConfig(BaseConfigModel):
     """Main application configuration."""
     
     # App metadata
@@ -127,7 +140,8 @@ class AppConfig(BaseSettings):
     log_level: str = Field(default="INFO", env="LOG_LEVEL")
     log_format: str = Field(default="json", env="LOG_FORMAT")  # json or console
     
-    @validator("environment")
+    @field_validator("environment")
+    @classmethod
     def validate_environment(cls, v):
         """Validate environment value."""
         valid_envs = ["development", "testing", "staging", "production"]
@@ -135,7 +149,8 @@ class AppConfig(BaseSettings):
             raise ValueError(f"Environment must be one of: {valid_envs}")
         return v.lower()
     
-    @validator("cors_origins", pre=True)
+    @field_validator("cors_origins", mode="before")
+    @classmethod
     def parse_cors_origins(cls, v):
         """Parse CORS origins from string or list."""
         if isinstance(v, str):
@@ -143,7 +158,7 @@ class AppConfig(BaseSettings):
         return v
 
 
-class AgentConfig(BaseSettings):
+class AgentConfig(BaseConfigModel):
     """AI agent configuration."""
     
     # Default LLM settings
@@ -164,7 +179,7 @@ class AgentConfig(BaseSettings):
     high_confidence_threshold: float = Field(default=0.8, env="HIGH_CONFIDENCE_THRESHOLD")
 
 
-class WorkflowConfig(BaseSettings):
+class WorkflowConfig(BaseConfigModel):
     """Workflow and HITL configuration."""
     
     max_concurrent_workflows: int = Field(default=3, env="MAX_CONCURRENT_WORKFLOWS")
@@ -177,7 +192,7 @@ class WorkflowConfig(BaseSettings):
     approval_timeout_hours: int = Field(default=24, env="APPROVAL_TIMEOUT_HOURS")
 
 
-class MonitoringConfig(BaseSettings):
+class MonitoringConfig(BaseConfigModel):
     """Monitoring and alerting configuration."""
     
     # Metrics
@@ -195,7 +210,7 @@ class MonitoringConfig(BaseSettings):
     latency_threshold: int = Field(default=1000, env="LATENCY_THRESHOLD")
 
 
-class SecurityConfig(BaseSettings):
+class SecurityConfig(BaseConfigModel):
     """Security and rate limiting configuration."""
     
     rate_limit_enabled: bool = Field(default=True, env="RATE_LIMIT_ENABLED")
@@ -207,7 +222,7 @@ class SecurityConfig(BaseSettings):
     max_request_size: str = Field(default="10MB", env="MAX_REQUEST_SIZE")
 
 
-class CacheConfig(BaseSettings):
+class CacheConfig(BaseConfigModel):
     """Caching configuration."""
     
     default_ttl: int = Field(default=3600, env="CACHE_DEFAULT_TTL")
@@ -220,7 +235,7 @@ class CacheConfig(BaseSettings):
     analysis_results_ttl: int = Field(default=3600, env="ANALYSIS_RESULTS_TTL")
 
 
-class Settings(BaseSettings):
+class Settings(BaseConfigModel):
     """Complete application settings with YAML support."""
     
     # Configuration file paths
@@ -239,7 +254,8 @@ class Settings(BaseSettings):
     def __init__(self, **kwargs):
         """Initialize settings with YAML configuration support."""
         # Load YAML configuration if available
-        yaml_config = self._load_yaml_config()
+        config_file = kwargs.get('config_file') or os.getenv('CONFIG_FILE')
+        yaml_config = self._load_yaml_config(config_file)
         
         # Merge YAML config with kwargs
         if yaml_config:
@@ -250,7 +266,7 @@ class Settings(BaseSettings):
         # Validate configuration
         self._validate_config()
     
-    def _load_yaml_config(self) -> Optional[Dict[str, Any]]:
+    def _load_yaml_config(self, config_file: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """Load YAML configuration files."""
         loader = YAMLConfigLoader()
         base_config = {}
@@ -263,8 +279,8 @@ class Settings(BaseSettings):
         ]
         
         # Add custom config file if specified
-        if self.config_file:
-            config_paths.insert(0, self.config_file)
+        if config_file:
+            config_paths.insert(0, Path(config_file))
         
         # Load base configuration
         for config_path in config_paths:
@@ -323,11 +339,13 @@ class Settings(BaseSettings):
         
         logger.info("Configuration validation passed", environment=self.app.environment)
     
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
-        validate_assignment = True
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        validate_assignment=True,
+        extra="ignore"  # Allow extra fields from YAML
+    )
 
 
 # Global settings instance
@@ -353,11 +371,6 @@ def get_settings(reload: bool = False) -> Settings:
 
 # Initialize settings on import
 settings = get_settings()
-
-
-def get_settings() -> Settings:
-    """Get application settings."""
-    return settings
 
 
 def is_production() -> bool:

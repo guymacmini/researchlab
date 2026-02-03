@@ -2,7 +2,7 @@
 
 import functools
 import asyncio
-from typing import Callable, Optional, Dict, Any, Union
+from typing import Callable, Optional, Dict, Any, Union, List
 
 from fastapi import Request, HTTPException
 import structlog

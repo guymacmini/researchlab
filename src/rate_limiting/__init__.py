@@ -21,8 +21,12 @@ from .strategies import (
 )
 
 from .decorators import (
-    rate_limit,
-    rate_limit_key_func
+    rate_limit_endpoint,
+    rate_limit_function,
+    rate_limit_user,
+    rate_limit_api_key,
+    configure_rate_limiting,
+    get_rate_limit_info_from_function
 )
 
 __all__ = [
@@ -44,6 +48,10 @@ __all__ = [
     "TokenBucketStrategy",
     
     # Decorators
-    "rate_limit",
-    "rate_limit_key_func",
+    "rate_limit_endpoint",
+    "rate_limit_function", 
+    "rate_limit_user",
+    "rate_limit_api_key",
+    "configure_rate_limiting",
+    "get_rate_limit_info_from_function",
 ]

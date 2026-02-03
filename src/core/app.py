@@ -13,6 +13,7 @@ from .config import settings
 from .logging import setup_logging
 from .database import init_db, close_db
 from ..monitoring import setup_monitoring_middleware
+from ..rate_limiting import setup_rate_limiting
 
 
 @asynccontextmanager
@@ -62,6 +63,33 @@ def create_app() -> FastAPI:
         health_path=settings.monitoring.health_path,
         metrics_path=settings.monitoring.metrics_path
     )
+    
+    # Setup rate limiting middleware
+    if settings.security.rate_limit_enabled:
+        # Create Redis backend if Redis is available, otherwise use memory
+        backend = None
+        if settings.database.redis_url and settings.app.environment != "testing":
+            try:
+                from redis.asyncio import Redis
+                redis_client = Redis.from_url(settings.database.redis_url)
+                from ..rate_limiting.backends import RedisBackend
+                backend = RedisBackend(redis_client)
+                logger.info("Using Redis backend for rate limiting")
+            except ImportError:
+                logger.warning("Redis not available, using memory backend for rate limiting")
+        
+        setup_rate_limiting(
+            app,
+            backend=backend,
+            requests_per_minute=settings.security.requests_per_minute,
+            burst_size=settings.security.burst_size,
+            skip_ips=["127.0.0.1", "::1"],  # Skip localhost
+            custom_rules={
+                "/api/v1/research/*": {"limit": 30, "window": 60},  # More restrictive for research endpoints
+                "/api/v1/workflow/execute": {"limit": 10, "window": 60},  # Very restrictive for workflow execution
+                "/api/v1/news/*": {"limit": 100, "window": 60}  # Higher limit for news endpoints
+            }
+        )
     
     # Request ID middleware
     @app.middleware("http")

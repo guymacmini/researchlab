@@ -43,9 +43,58 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.app.app_name,
         version=settings.app.version,
-        description="AI-led investment research platform",
+        description="AI-Led Investment Research Platform - Multi-agent system for comprehensive equity analysis",
+        summary="Professional-grade investment research through specialized AI agents",
         lifespan=lifespan,
         debug=settings.app.debug,
+        docs_url="/docs",
+        redoc_url="/redoc",
+        openapi_url="/openapi.json",
+        openapi_tags=[
+            {
+                "name": "research",
+                "description": "Research project management - Start, monitor, and retrieve investment research analyses",
+            },
+            {
+                "name": "workflow", 
+                "description": "Workflow orchestration - Control and monitor agent execution workflows",
+            },
+            {
+                "name": "news",
+                "description": "News monitoring - Track and analyze market-relevant news and sentiment",
+            },
+            {
+                "name": "agents",
+                "description": "Agent management - Direct interaction with specialized research agents", 
+            },
+            {
+                "name": "companies",
+                "description": "Company data - Access company profiles, financials, and market data",
+            },
+            {
+                "name": "monitoring",
+                "description": "System monitoring - Health checks, metrics, and performance monitoring",
+            }
+        ],
+        contact={
+            "name": "ResearchLab Support",
+            "email": "support@researchlab.com",
+            "url": "https://researchlab.com/support"
+        },
+        license_info={
+            "name": "Proprietary",
+            "url": "https://researchlab.com/license"
+        },
+        servers=[
+            {
+                "url": "http://localhost:8000",
+                "description": "Development server"
+            },
+            {
+                "url": "https://api.researchlab.com", 
+                "description": "Production server"
+            }
+        ]
     )
     
     # CORS middleware
@@ -140,10 +189,108 @@ def create_app() -> FastAPI:
     from src.api.research import router as research_router
     from src.api.workflow import router as workflow_router
     from src.api.news import router as news_router
+    from src.api.agents import router as agents_router
+    from src.api.companies import router as companies_router
     
     app.include_router(research_router, prefix="/api/v1", tags=["research"])
-    app.include_router(workflow_router, prefix="/api/v1", tags=["workflow"])
+    app.include_router(workflow_router, prefix="/api/v1", tags=["workflow"])  
     app.include_router(news_router, prefix="/api/v1", tags=["news"])
+    app.include_router(agents_router, prefix="/api/v1", tags=["agents"])
+    app.include_router(companies_router, prefix="/api/v1", tags=["companies"])
+    
+    # Customize OpenAPI schema
+    def custom_openapi():
+        if app.openapi_schema:
+            return app.openapi_schema
+        
+        from fastapi.openapi.utils import get_openapi
+        openapi_schema = get_openapi(
+            title=app.title,
+            version=app.version,
+            description=app.description,
+            routes=app.routes,
+        )
+        
+        # Add custom components
+        openapi_schema["components"]["schemas"]["ErrorResponse"] = {
+            "type": "object",
+            "properties": {
+                "error": {"type": "string", "description": "Error type"},
+                "detail": {"type": "string", "description": "Detailed error message"},
+                "request_id": {"type": "string", "description": "Request correlation ID"}
+            },
+            "required": ["error", "detail"]
+        }
+        
+        # Add security schemes
+        openapi_schema["components"]["securitySchemes"] = {
+            "ApiKeyAuth": {
+                "type": "apiKey",
+                "in": "header", 
+                "name": "X-API-Key",
+                "description": "API key for authentication"
+            },
+            "BearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+                "description": "JWT token for authentication"
+            }
+        }
+        
+        # Add common response codes
+        common_responses = {
+            "400": {
+                "description": "Bad Request",
+                "content": {
+                    "application/json": {
+                        "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+                    }
+                }
+            },
+            "401": {
+                "description": "Unauthorized", 
+                "content": {
+                    "application/json": {
+                        "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+                    }
+                }
+            },
+            "429": {
+                "description": "Rate Limit Exceeded",
+                "content": {
+                    "application/json": {
+                        "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+                    }
+                }
+            },
+            "500": {
+                "description": "Internal Server Error",
+                "content": {
+                    "application/json": {
+                        "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+                    }
+                }
+            }
+        }
+        
+        # Add common responses to all paths
+        for path in openapi_schema["paths"].values():
+            for method in path.values():
+                if isinstance(method, dict) and "responses" in method:
+                    method["responses"].update(common_responses)
+        
+        # Add info about rate limiting
+        openapi_schema["info"]["x-rate-limits"] = {
+            "default": "100 requests per minute",
+            "research": "30 requests per hour", 
+            "workflow": "10 concurrent executions"
+        }
+        
+        app.openapi_schema = openapi_schema
+        return app.openapi_schema
+    
+    app.openapi = custom_openapi
     
     return app
 

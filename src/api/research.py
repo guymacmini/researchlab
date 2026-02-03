@@ -5,7 +5,7 @@ from datetime import datetime
 import uuid
 
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_db_session
@@ -19,14 +19,36 @@ router = APIRouter(prefix="/research", tags=["research"])
 
 # Pydantic models for API
 class CompanyInfo(BaseModel):
-    """Company information for research."""
-    symbol: str = Field(..., description="Stock ticker symbol")
-    name: str = Field(..., description="Company name")
-    sector: Optional[str] = Field(None, description="Industry sector")
-    market_cap: Optional[float] = Field(None, description="Market capitalization")
+    """Company information for research analysis.
     
-    class Config:
-        json_schema_extra = {
+    Represents a company to be analyzed within a research project.
+    Market cap should be provided in USD.
+    """
+    symbol: str = Field(
+        ..., 
+        description="Stock ticker symbol (e.g. AAPL, MSFT)",
+        min_length=1,
+        max_length=10
+    )
+    name: str = Field(
+        ..., 
+        description="Full company name",
+        min_length=1,
+        max_length=200
+    )
+    sector: Optional[str] = Field(
+        None, 
+        description="Industry sector (e.g. Technology, Healthcare)",
+        max_length=100
+    )
+    market_cap: Optional[float] = Field(
+        None, 
+        description="Market capitalization in USD",
+        gt=0
+    )
+    
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "symbol": "AAPL",
                 "name": "Apple Inc.",
@@ -34,6 +56,7 @@ class CompanyInfo(BaseModel):
                 "market_cap": 3000000000000
             }
         }
+    )
 
 
 class ResearchRequest(BaseModel):

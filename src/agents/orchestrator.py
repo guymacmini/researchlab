@@ -13,6 +13,7 @@ from src.data.models import ResearchProject, AgentAnalysis, ResearchStatus
 from .base import BaseAgent, AgentRole, AgentMessage, AgentResult
 from .research_director import ResearchDirectorAgent
 from .fundamental_analyst import FundamentalAnalystAgent
+from .supply_chain_analyst import SupplyChainAnalystAgent
 
 logger = structlog.get_logger()
 
@@ -34,6 +35,7 @@ class AgentOrchestrator:
         self.agents = {
             AgentRole.RESEARCH_DIRECTOR: ResearchDirectorAgent(),
             AgentRole.FUNDAMENTAL_ANALYST: FundamentalAnalystAgent(),
+            AgentRole.SUPPLY_CHAIN_ANALYST: SupplyChainAnalystAgent(),
             # TODO: Add other agents as they're implemented
         }
         

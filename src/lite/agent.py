@@ -333,7 +333,7 @@ class ResearchAgent:
         
         try:
             response = await self.anthropic.messages.create(
-                model="claude-sonnet-4-20250514",
+                model="claude-3-5-haiku-20241022",  # Use correct model name
                 max_tokens=1000,
                 temperature=0.2,
                 messages=[{"role": "user", "content": prompt}]
@@ -508,7 +508,7 @@ class ResearchAgent:
         
         try:
             response = await self.anthropic.messages.create(
-                model="claude-sonnet-4-20250514",
+                model="claude-3-5-haiku-20241022",  # Use correct model name
                 max_tokens=6000,
                 temperature=0.2,
                 messages=[{"role": "user", "content": prompt}]
@@ -738,7 +738,7 @@ CRITICAL RULES:
         
         try:
             response = await self.anthropic.messages.create(
-                model="claude-sonnet-4-20250514",
+                model="claude-3-5-haiku-20241022",  # Use correct model name
                 max_tokens=4000,
                 temperature=0.2,
                 messages=[{"role": "user", "content": prompt}]

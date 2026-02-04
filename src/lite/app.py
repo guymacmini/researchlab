@@ -14,7 +14,7 @@ import structlog
 
 from .config import settings
 from .database import init_database, close_database, get_db, Research
-from .agent import agent
+from .agent import agent, ConversationState
 
 logger = structlog.get_logger()
 
@@ -24,12 +24,32 @@ class ResearchQuery(BaseModel):
     include_clarifying_questions: bool = True
 
 
+class ConversationStart(BaseModel):
+    query: str
+    session_id: Optional[str] = None
+
+
+class ConversationContinue(BaseModel):
+    session_id: str
+    answers: Dict[str, str]
+
+
 class ResearchResponse(BaseModel):
     id: int
     query: str
     status: str
     results: Optional[Dict[str, Any]] = None
     clarifying_questions: Optional[List[str]] = None
+
+
+class ConversationResponse(BaseModel):
+    conversation_id: str
+    state: str
+    original_query: str
+    message: Optional[str] = None
+    clarifying_questions: Optional[List[str]] = None
+    analysis: Optional[Dict[str, Any]] = None
+    timestamp: str
 
 
 @asynccontextmanager
@@ -102,11 +122,42 @@ def create_lite_app() -> FastAPI:
         """Health check endpoint."""
         return {"status": "ok", "version": settings.version}
     
+    @app.post("/api/conversation/start", response_model=ConversationResponse)
+    async def start_conversation(query_data: ConversationStart):
+        """Start a new research conversation."""
+        try:
+            import uuid
+            session_id = query_data.session_id or str(uuid.uuid4())
+            
+            logger.info("Starting conversation", query=query_data.query, session_id=session_id)
+            
+            result = await agent.start_conversation(query_data.query, session_id)
+            
+            return ConversationResponse(**result)
+            
+        except Exception as e:
+            logger.error("Failed to start conversation", query=query_data.query, error=str(e))
+            raise HTTPException(status_code=500, detail=f"Failed to start conversation: {str(e)}")
+    
+    @app.post("/api/conversation/continue", response_model=ConversationResponse)
+    async def continue_conversation(continue_data: ConversationContinue):
+        """Continue conversation with answers to clarifying questions."""
+        try:
+            logger.info("Continuing conversation", session_id=continue_data.session_id)
+            
+            result = await agent.continue_conversation(continue_data.session_id, continue_data.answers)
+            
+            return ConversationResponse(**result)
+            
+        except Exception as e:
+            logger.error("Failed to continue conversation", session_id=continue_data.session_id, error=str(e))
+            raise HTTPException(status_code=500, detail=f"Failed to continue conversation: {str(e)}")
+
     @app.post("/api/research", response_model=ResearchResponse)
     async def start_research(query_data: ResearchQuery):
-        """Start a research query."""
+        """Legacy endpoint - start a research query directly."""
         try:
-            logger.info("Starting research", query=query_data.query)
+            logger.info("Starting direct research (legacy)", query=query_data.query)
             
             # Generate clarifying questions if requested
             clarifying_questions = None
@@ -182,26 +233,76 @@ def create_lite_app() -> FastAPI:
     # Simple web interface routes
     @app.post("/research", response_class=HTMLResponse)
     async def web_research(request: Request, query: str = Form(...)):
-        """Web interface research submission."""
+        """Web interface research submission - now using conversation flow."""
         try:
-            # Start research
-            results = await agent.research_company(query)
+            import uuid
+            session_id = str(uuid.uuid4())
             
-            # Get clarifying questions
-            clarifying_questions = await agent.get_clarifying_questions(query)
+            # Start conversation
+            result = await agent.start_conversation(query, session_id)
             
-            return templates.TemplateResponse("results.html", {
-                "request": request,
-                "query": query,
-                "results": results,
-                "clarifying_questions": clarifying_questions
-            })
+            # Check if we need clarifying questions
+            if result.get("state") == ConversationState.CLARIFYING_QUESTIONS.value:
+                return templates.TemplateResponse("clarifying_questions.html", {
+                    "request": request,
+                    "conversation_id": result["conversation_id"],
+                    "original_query": result["original_query"],
+                    "clarifying_questions": result["clarifying_questions"],
+                    "message": result.get("message", "")
+                })
+            else:
+                # Direct analysis (specific company query)
+                return templates.TemplateResponse("results.html", {
+                    "request": request,
+                    "query": query,
+                    "results": result,
+                    "conversation_id": session_id
+                })
             
         except Exception as e:
             logger.error("Web research failed", query=query, error=str(e))
             return templates.TemplateResponse("error.html", {
                 "request": request,
                 "query": query,
+                "error": str(e)
+            })
+    
+    @app.post("/research/continue", response_class=HTMLResponse)
+    async def web_continue_research(request: Request):
+        """Continue research conversation with answers."""
+        try:
+            form_data = await request.form()
+            conversation_id = form_data.get("conversation_id")
+            
+            if not conversation_id:
+                raise ValueError("Missing conversation ID")
+            
+            # Extract answers from form
+            answers = {}
+            for key, value in form_data.items():
+                if key.startswith("answer_"):
+                    question_index = key.replace("answer_", "")
+                    question = form_data.get(f"question_{question_index}")
+                    if question and value:
+                        answers[question] = value
+            
+            # Continue conversation
+            result = await agent.continue_conversation(conversation_id, answers)
+            
+            return templates.TemplateResponse("thematic_results.html", {
+                "request": request,
+                "conversation_id": conversation_id,
+                "original_query": result["original_query"], 
+                "answers": result["answers"],
+                "companies_analyzed": result["companies_analyzed"],
+                "analysis": result["analysis"],
+                "timestamp": result["timestamp"]
+            })
+            
+        except Exception as e:
+            logger.error("Failed to continue web research", error=str(e))
+            return templates.TemplateResponse("error.html", {
+                "request": request,
                 "error": str(e)
             })
     

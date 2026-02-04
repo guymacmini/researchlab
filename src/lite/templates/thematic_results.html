@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}Thematic Analysis - {{ original_query }}{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-chart-line me-2"></i>Thematic Analysis Results</h2>
+        <a href="/" class="btn btn-outline-primary">
+            <i class="fas fa-plus me-1"></i>
+            New Research
+        </a>
+    </div>
+
+    <div class="alert alert-success">
+        <strong>Original Query:</strong> {{ original_query }}
+    </div>
+
+    <!-- Your Preferences -->
+    {% if answers %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5><i class="fas fa-user-cog me-2"></i>Your Investment Preferences</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for question, answer in answers.items() %}
+                <div class="col-md-6 mb-2">
+                    <strong>{{ question }}</strong><br>
+                    <span class="text-muted">{{ answer }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Companies Analyzed -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5><i class="fas fa-building me-2"></i>Companies Analyzed ({{ companies_analyzed|length }})</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for company in companies_analyzed %}
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card border">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                {{ company.ticker }} - {{ company.name }}
+                            </h6>
+                            <p class="card-text small">{{ company.rationale }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Analysis -->
+    <div class="analysis-section">
+        <h4><i class="fas fa-robot me-2"></i>AI Thematic Analysis</h4>
+        {% if analysis.analysis_text %}
+            <div class="analysis-text card">
+                <div class="card-body">
+                    {{ analysis.analysis_text | replace('\n', '<br>') | safe }}
+                </div>
+            </div>
+        {% else %}
+            <div class="alert alert-warning">
+                <p>Analysis not available.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Company Data Overview -->
+    {% if analysis.company_data %}
+    <div class="card mb-4 mt-4">
+        <div class="card-header">
+            <h4><i class="fas fa-chart-bar me-2"></i>Company Data Overview</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for ticker, data in analysis.company_data.items() %}
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card border">
+                        <div class="card-header">
+                            <h6>{{ ticker }} - {{ data.info.name }}</h6>
+                        </div>
+                        <div class="card-body">
+                            {% if data.financial_data.quote %}
+                                {% set quote = data.financial_data.quote %}
+                                <p><strong>Price:</strong> ${{ "%.2f"|format(quote.c or 0) }}</p>
+                                {% set change = quote.d or 0 %}
+                                <p><strong>Change:</strong> 
+                                    <span class="{{ 'text-success' if change >= 0 else 'text-danger' }}">
+                                        {{ "%.2f"|format(change) }} ({{ "%.2f"|format(quote.dp or 0) }}%)
+                                    </span>
+                                </p>
+                            {% endif %}
+                            
+                            {% if data.financial_data.profile %}
+                                {% set profile = data.financial_data.profile %}
+                                <p><strong>Sector:</strong> {{ profile.finnhubIndustry or 'Unknown' }}</p>
+                                {% if profile.marketCapitalization %}
+                                <p><strong>Market Cap:</strong> ${{ profile.marketCapitalization }}M</p>
+                                {% endif %}
+                            {% endif %}
+                            
+                            <!-- Show recent news count -->
+                            {% if data.news.articles %}
+                            <p><strong>Recent News:</strong> {{ data.news.articles|length }} articles</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Analysis Metadata -->
+    <div class="card">
+        <div class="card-header">
+            <h5><i class="fas fa-info me-2"></i>Analysis Details</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Generated:</strong> {{ timestamp }}</p>
+                    <p><strong>Companies Analyzed:</strong> {{ companies_analyzed|length }}</p>
+                    <p><strong>Data Sources:</strong> {{ analysis.data_sources|join(', ') if analysis.data_sources else 'N/A' }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Analysis Type:</strong> <span class="badge bg-success">Thematic Research</span></p>
+                    <p><strong>Conversation ID:</strong> <code>{{ conversation_id }}</code></p>
+                    {% if analysis.generated_at %}
+                    <p><strong>Analysis Timestamp:</strong> {{ analysis.generated_at }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+.analysis-text {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.6;
+    background: #f8f9fa;
+    border-left: 4px solid #007bff;
+}
+
+.analysis-text h1, .analysis-text h2, .analysis-text h3 {
+    color: #2c3e50;
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+}
+
+.analysis-text h4, .analysis-text h5 {
+    color: #34495e;
+    margin-top: 1.2em;
+    margin-bottom: 0.4em;
+}
+
+.analysis-text strong {
+    color: #2c3e50;
+}
+
+.card-header h6 {
+    margin-bottom: 0;
+    color: #495057;
+}
+
+.border {
+    border-color: #dee2e6 !important;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Format any timestamps
+document.querySelectorAll('[data-timestamp]').forEach(el => {
+    const timestamp = el.getAttribute('data-timestamp');
+    el.textContent = new Date(timestamp).toLocaleString();
+});
+</script>
+{% endblock %}

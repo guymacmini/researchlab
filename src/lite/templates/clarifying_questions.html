@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Clarifying Questions - {{ original_query }}{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-question-circle me-2"></i>Let's Get Specific</h2>
+        <a href="/" class="btn btn-outline-primary">
+            <i class="fas fa-home me-1"></i>
+            Start Over
+        </a>
+    </div>
+
+    <div class="alert alert-info">
+        <strong>Your Query:</strong> {{ original_query }}
+    </div>
+
+    {% if message %}
+        <div class="alert alert-primary">
+            <i class="fas fa-robot me-2"></i>{{ message }}
+        </div>
+    {% endif %}
+
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">
+                <i class="fas fa-comments me-2"></i>
+                Help Me Provide Better Analysis
+            </h4>
+        </div>
+        <div class="card-body">
+            <form action="/research/continue" method="post" id="clarifyingForm">
+                <input type="hidden" name="conversation_id" value="{{ conversation_id }}">
+                
+                {% for question in clarifying_questions %}
+                    <div class="mb-4">
+                        <label for="answer_{{ loop.index0 }}" class="form-label fw-bold">
+                            {{ loop.index }}. {{ question }}
+                        </label>
+                        <input type="hidden" name="question_{{ loop.index0 }}" value="{{ question }}">
+                        <textarea class="form-control" id="answer_{{ loop.index0 }}" name="answer_{{ loop.index0 }}" 
+                                  rows="2" placeholder="Your answer here..." required></textarea>
+                    </div>
+                {% endfor %}
+
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-arrow-right me-2"></i>
+                        Continue Analysis
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <div class="card">
+            <div class="card-body">
+                <h6><i class="fas fa-lightbulb me-2 text-warning"></i>Why These Questions?</h6>
+                <p class="mb-0 text-muted">
+                    These questions help me provide more targeted, actionable investment analysis. 
+                    The more specific your answers, the better I can identify relevant companies and 
+                    tailor the analysis to your investment style and goals.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('clarifyingForm').addEventListener('submit', function(e) {
+    const button = this.querySelector('button[type="submit"]');
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Analyzing...';
+    button.disabled = true;
+    
+    // Show progress message
+    const progressDiv = document.createElement('div');
+    progressDiv.className = 'alert alert-info mt-3';
+    progressDiv.innerHTML = '<i class="fas fa-cog fa-spin me-2"></i>Identifying relevant companies and performing analysis...';
+    this.appendChild(progressDiv);
+});
+
+// Add some interactivity - auto-resize textareas
+document.querySelectorAll('textarea').forEach(textarea => {
+    textarea.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
+    });
+});
+</script>
+{% endblock %}

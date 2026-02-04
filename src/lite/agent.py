@@ -53,7 +53,28 @@ class ResearchAgent:
             # If it's a specific company query, skip clarifying questions
             if query_type == QueryType.SPECIFIC_COMPANY:
                 logger.info("Specific company query detected, proceeding directly to analysis")
-                return await self.research_company(query)
+                results = await self.research_company(query)
+                
+                # Convert to conversation format
+                return {
+                    "conversation_id": session_id,
+                    "state": ConversationState.ANALYSIS_COMPLETE.value,
+                    "original_query": query,
+                    "query_type": query_type.value,
+                    "message": "Direct analysis completed for specific company query.",
+                    "analysis": {
+                        "analysis_text": results.get("analysis", {}).get("analysis_text", ""),
+                        "company_data": {results.get("symbol", "UNKNOWN"): {
+                            "info": {"ticker": results.get("symbol"), "name": "Direct Query", "rationale": "User specified company"},
+                            "financial_data": results.get("company_data", {}),
+                            "news": results.get("news_data", {})
+                        }},
+                        "companies_analyzed": [{"ticker": results.get("symbol"), "name": "Direct Query", "rationale": "User specified company"}],
+                        "data_sources": results.get("analysis", {}).get("data_sources", ["finnhub", "anthropic_claude"]),
+                        "generated_at": results.get("timestamp")
+                    },
+                    "timestamp": datetime.utcnow().isoformat()
+                }
             
             # For thematic/comparison queries, start with clarifying questions
             clarifying_questions = await self._generate_clarifying_questions(query, query_type)

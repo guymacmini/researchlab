@@ -577,15 +577,29 @@ class ResearchAgent:
             # Cache for 15 minutes
             await cache.set(cache_key, json.dumps(data), ttl_seconds=900)
             
-            # Save to companies table
+            # Save to companies table with proper upsert
             async with get_db() as db:
-                company = Company(
-                    symbol=symbol,
-                    name=profile.get('name'),
-                    sector=profile.get('finnhubIndustry'),
-                    data=json.dumps(data)
-                )
-                await db.merge(company)  # Insert or update
+                from sqlalchemy import select
+                # Check if company exists
+                result = await db.execute(select(Company).where(Company.symbol == symbol))
+                existing_company = result.scalar_one_or_none()
+                
+                if existing_company:
+                    # Update existing company
+                    existing_company.name = profile.get('name')
+                    existing_company.sector = profile.get('finnhubIndustry')
+                    existing_company.data = json.dumps(data)
+                    existing_company.last_updated = datetime.utcnow()
+                else:
+                    # Create new company
+                    company = Company(
+                        symbol=symbol,
+                        name=profile.get('name'),
+                        sector=profile.get('finnhubIndustry'),
+                        data=json.dumps(data)
+                    )
+                    db.add(company)
+                
                 await db.commit()
             
             return data
